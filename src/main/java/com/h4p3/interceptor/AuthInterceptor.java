@@ -2,6 +2,9 @@ package com.h4p3.interceptor;
 
 import com.alibaba.fastjson2.JSON;
 import com.h4p3.annotation.Auth;
+import com.h4p3.constant.MemberConstants;
+import com.h4p3.context.RequestContext;
+import com.h4p3.context.RequestContextHolder;
 import com.h4p3.entity.MemberCacheEntity;
 import com.h4p3.exception.AccessDeniedException;
 import com.h4p3.util.JwtUtil;
@@ -12,8 +15,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
 
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -22,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
 
-    private static final long MILLIS_MINUTE_TEN = 20 * 60 * 1000L;
+
     private final StringRedisTemplate stringRedisTemplate;
 
     public AuthInterceptor(StringRedisTemplate stringRedisTemplate) {
@@ -31,26 +36,33 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        // TODO: 2023/5/26 先校验token
-        String token = request.getHeader("Auth");
+        // 先校验token
+        String token = JwtUtil.getToken(request);
         if (token == null || "".equals(token)) {
             throw new AccessDeniedException("请登录");
         }
+
         Claims claims = JwtUtil.parseToken(token);
-        String userName = (String) claims.get("login_user_key");
+        String userName = (String) claims.get(MemberConstants.LOGIN_KEY);
         String userJson = stringRedisTemplate.opsForValue().get(userName);
         if (userJson == null || "".equals(userJson)) {
             throw new AccessDeniedException("请登录");
         }
+
         MemberCacheEntity memberCacheEntity = JSON.parseObject(userJson, MemberCacheEntity.class);
-        long l = memberCacheEntity.tokenExpire();
-        long l1 = System.currentTimeMillis();
-        if (l1 - l <= MILLIS_MINUTE_TEN) {
-            // 刷新token
-            stringRedisTemplate.opsForValue().set(userName, userJson, 30, TimeUnit.MINUTES);
+
+        // token即将过期，刷新token
+        long tokenCreateTime = memberCacheEntity.tokenCreateTime();
+        long now = System.currentTimeMillis();
+        if (now - tokenCreateTime <= MemberConstants.MILLIS_MINUTE_TEN) {
+            stringRedisTemplate.opsForValue().set(userName, userJson, MemberConstants.LOGIN_EXPIRE_TIME, TimeUnit.MINUTES);
         }
 
+        // 设置上下文
+        RequestContextHolder.setContext(new RequestContext(userName, memberCacheEntity.permission()));
+
         if (handler instanceof HandlerMethod) {
+            // 校验权限
             Method method = ((HandlerMethod) handler).getMethod();
             Auth annotation = method.getAnnotation(Auth.class);
             if (annotation == null) {
@@ -61,12 +73,19 @@ public class AuthInterceptor implements HandlerInterceptor {
                 return true;
             }
 
-            String requestURI = request.getRequestURI();
-            Object o = stringRedisTemplate.opsForHash().get(permission, requestURI);
-            if (o == null) {
-                throw new AccessDeniedException(requestURI);
+            List<String> userPermissions = memberCacheEntity.permission();
+            if (!userPermissions.contains(permission)) {
+                throw new AccessDeniedException("无权限访问");
             }
         }
+        // 非视图方法，直接跳过
         return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        // 清除请求上下文
+        RequestContextHolder.clearContext();
+        HandlerInterceptor.super.postHandle(request, response, handler, modelAndView);
     }
 }

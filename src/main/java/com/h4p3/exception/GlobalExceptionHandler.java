@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<String> handleAccessDeniedException(AccessDeniedException e, HttpServletRequest request) {
         String requestURI = request.getRequestURI();
         log.error("请求地址'{}',权限校验失败'{}'", requestURI, e.getMessage());
-        return ResponseEntity.internalServerError().body("没有权限，请联系管理员授权");
+        return ResponseEntity.internalServerError().body(e.getMessage());
     }
 
     /**

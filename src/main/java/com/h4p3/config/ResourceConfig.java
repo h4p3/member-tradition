@@ -15,7 +15,7 @@ public class ResourceConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(authInterceptor).addPathPatterns("/**").excludePathPatterns("/mt/member/login");
+        registry.addInterceptor(authInterceptor).addPathPatterns("/**").excludePathPatterns("/member/login");
         WebMvcConfigurer.super.addInterceptors(registry);
     }
 }

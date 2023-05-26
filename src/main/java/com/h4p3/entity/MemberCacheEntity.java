@@ -1,4 +1,6 @@
 package com.h4p3.entity;
 
-public record MemberCacheEntity(String userName, String description, long tokenExpire) {
+import java.util.List;
+
+public record MemberCacheEntity(String userName, String description, long tokenCreateTime, List<String> permission) {
 }

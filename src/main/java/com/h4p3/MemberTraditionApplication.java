@@ -15,10 +15,10 @@ public class MemberTraditionApplication {
 
     @PostConstruct
     public void init() {
-        stringRedisTemplate.opsForHash().put("READ", "/mt/member/sayHi", ".");
-        stringRedisTemplate.opsForHash().put("READ", "/mt/member/sayHello", ".");
-        stringRedisTemplate.opsForHash().put("READ", "/mt/member/sayYeah", ".");
-        stringRedisTemplate.opsForHash().put("READ", "/mt/member/sayNothing", ".");
+        // 模拟数据库记录
+        stringRedisTemplate.opsForHash().put("USERS", "Josh", "123456");
+        stringRedisTemplate.opsForHash().put("USERS", "Jack", "741258");
+        stringRedisTemplate.opsForHash().put("USERS", "Neal", "987654");
     }
 
     public static void main(String[] args) {
