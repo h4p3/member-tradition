@@ -1,0 +1,24 @@
+spring:
+  data:
+    redis:
+      host: 192.168.0.136
+      port: 6379
+      database: 12
+      connect-timeout: 10s
+  application:
+    name: member-tradition
+server:
+  port: 7788
+  servlet:
+    application-display-name: member-tradition
+    context-path: /mt
+
+
+# token配置
+token:
+  # 令牌自定义标识
+  header: Authorization
+  # 令牌密钥
+  secret: abcdefghijklmnopqrstuvwxyz
+  # 令牌有效期（默认30分钟）
+  expireTime: 720
