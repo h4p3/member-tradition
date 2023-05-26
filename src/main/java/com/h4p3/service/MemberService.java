@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class MemberService {
@@ -40,7 +41,9 @@ public class MemberService {
             String token = JwtUtil.createToken(map);
 
             MemberCacheEntity doTheBest = new MemberCacheEntity(userName, "do the best", System.currentTimeMillis());
+
             stringRedisTemplate.opsForValue().set(userName, JSON.toJSONString(doTheBest));
+            stringRedisTemplate.opsForValue().set("token:" + userName, token, 30, TimeUnit.MINUTES);
             return token;
         }
         throw new ServiceException("密码不正确");

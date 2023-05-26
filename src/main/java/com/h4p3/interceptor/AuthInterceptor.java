@@ -14,6 +14,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 认证拦截器
@@ -36,7 +37,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             throw new AccessDeniedException("请登录");
         }
         Claims claims = JwtUtil.parseToken(token);
-        Object userName = claims.get("login_user_key");
+        String userName = (String) claims.get("login_user_key");
         String userJson = stringRedisTemplate.opsForValue().get(userName);
         if (userJson == null || "".equals(userJson)) {
             throw new AccessDeniedException("请登录");
@@ -46,7 +47,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         long l1 = System.currentTimeMillis();
         if (l1 - l <= MILLIS_MINUTE_TEN) {
             // 刷新token
-
+            stringRedisTemplate.opsForValue().set(userName, userJson, 30, TimeUnit.MINUTES);
         }
 
         if (handler instanceof HandlerMethod) {
